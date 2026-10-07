@@ -1,0 +1,4 @@
+user_id,expected_status,scenario
+"2' OR '1'='1",403,SQL-like input
+"2%",403,Encoded suspicious input
+"1=1",403,Boolean injection-like input
