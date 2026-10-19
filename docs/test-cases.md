@@ -229,17 +229,273 @@ Example malformed body:
 
 ### Malformed JSON Observation
 
+- Malformed JSON submitted with `Content-Type: application/json` is rejected with HTTP 400 Bad Request.
+- The API returns a structured JSON error and does not generate a user ID or creation timestamp.
+
+
+## POST Observations
+
+- The POST demo endpoint performs very limited payload validation.
+- Missing fields, unexpected data types, null values, nested objects, and additional properties are accepted.
+- Incorrect request Content-Type may still result in HTTP 201 even though submitted user fields are not processed.
+- Malformed JSON is rejected with HTTP 400.
+  
+---
+
+# PUT Update User
+
+Endpoint:
+
+`PUT /api/users/{id}`
+
+Postman requests:
+
+- `PUT Update User Positive`
+- `PUT Update User - Payload Validation`
+- `PUT Update User - Non-existing User`
+- `PUT Update User - Invalid Path Parameter`
+- `PUT Update User - Security Inputs`
+- `PUT Update User - Malformed JSON`
+
+---
+
+## PUT Update User Positive
+
+Postman request:
+
+`PUT Update User Positive`
+
+Request:
+
+`PUT {{base_url}}/api/users/{{positive_user_id}}`
+
+Default test data:
+
+`positive_user_id = 2`
+
+Content-Type:
+
+`application/json`
+
+Example request body:
+
+```json
+{
+  "name": "Igor Updated",
+  "job": "Senior QA Engineer"
+}
+```
+
+| ID | Scenario | Expected Result | Actual Result | Status |
+|---|---|---|---|---|
+| PUT-USER-001 | Update existing user | HTTP 200 OK | HTTP 200 OK | Pass |
+| PUT-USER-002 | Validate response Content-Type | Response is JSON | `application/json` returned | Pass |
+| PUT-USER-003 | Validate returned user data | `name` and `job` match request body | Values match request | Pass |
+| PUT-USER-004 | Validate update timestamp | Response contains `updatedAt` | `updatedAt` returned | Pass |
+| PUT-USER-005 | Validate update timestamp format | `updatedAt` is a valid date-time | Valid timestamp returned | Pass |
+| PUT-USER-006 | Validate response schema | Required fields and data types match schema | Schema validation passed | Pass |
+
+### Expected Response Structure
+
+```text
+name      -> string
+job       -> string
+updatedAt -> string / date-time
+```
+
+---
+
+## PUT Update User - Payload Validation
+
+Purpose:
+
+Validate how the endpoint handles missing, empty, invalid, unexpected, and unusual JSON values during an update.
+
+Request:
+
+`PUT {{base_url}}/api/users/{{positive_user_id}}`
+
+Content-Type:
+
+`application/json`
+
+| ID | Scenario | Test Data | Observed Result |
+|---|---|---|---|
+| PUT-PAYLOAD-001 | Empty JSON body | `{}` | HTTP 200; only `updatedAt` generated |
+| PUT-PAYLOAD-002 | Missing `name` | `{"job":"Senior QA Engineer"}` | HTTP 200; supplied field accepted |
+| PUT-PAYLOAD-003 | Missing `job` | `{"name":"Igor"}` | HTTP 200; supplied field accepted |
+| PUT-PAYLOAD-004 | Empty string values | `{"name":"","job":""}` | HTTP 200; empty values accepted |
+| PUT-PAYLOAD-005 | Null value | `{"name":"Igor","job":"QA","nose":null}` | HTTP 200; null value accepted |
+| PUT-PAYLOAD-006 | Additional property | `{"name":"Igor","job":"QA","role":"admin"}` | HTTP 200; additional property accepted and returned |
+| PUT-PAYLOAD-007 | Multiple unusual values | `{"name":"","job":"","role":"admin","nose":null}` | HTTP 200; supplied values accepted and returned |
+
+### Payload Validation Observations
+
+- The endpoint accepts an empty JSON object and still returns HTTP 200.
+- No required-field validation for `name` or `job` was observed.
+- Empty values and null values are accepted.
+- Additional properties are accepted and reflected in the response.
+- The demo endpoint behaves permissively when processing update payloads.
+
+---
+
+## PUT Update User - Non-existing User
+
+Postman request:
+
+`PUT Update User - Non-existing User`
+
+Request:
+
+`PUT {{base_url}}/api/users/{{non_existing_user_id}}`
+
+Test data:
+
+`non_existing_user_id = 1000`
+
+| ID | Scenario | Expected / Observed Result | Status |
+|---|---|---|---|
+| PUT-NONEXIST-001 | Update non-existing user ID `1000` | HTTP 200 returned | Observed |
+| PUT-NONEXIST-002 | Validate response format | JSON response returned | Pass |
+| PUT-NONEXIST-003 | Validate submitted fields | Submitted fields are reflected in response | Pass |
+| PUT-NONEXIST-004 | Validate update timestamp | `updatedAt` returned | Pass |
+| PUT-NONEXIST-005 | Validate timestamp format | `updatedAt` is valid date-time | Pass |
+
+### Non-existing User Observation
+
+A PUT request to user ID `1000`, which is not an existing user in the demo dataset, returns HTTP 200 and generates an `updatedAt` value.
+
+No resource-existence validation was observed.
+
+This behavior is documented as observed behavior rather than classified as a defect because no production API requirement is available requiring HTTP 404 for this demo endpoint.
+
+---
+
+## PUT Update User - Invalid Path Parameter
+
+Postman request:
+
+`PUT Update User - Invalid Path Parameter`
+
+Request:
+
+`PUT {{base_url}}/api/users/{{invalid_user_id}}`
+
+Example test data:
+
+```text
+-1
+abc
+#
+```
+
+| ID | Scenario | Test Data | Observed Result |
+|---|---|---|---|
+| PUT-PATH-001 | Negative ID | `-1` | HTTP 200; update response returned |
+| PUT-PATH-002 | Alphabetic ID | `abc` | HTTP 200; update response returned |
+| PUT-PATH-003 | Special-character ID | `#` | Invalid path value handled without application server error |
+
+### Invalid Path Parameter Observations
+
+- PUT processing is more permissive than GET processing for invalid identifiers.
+- Invalid path parameter values may still receive a successful update-style response.
+- The endpoint does not appear to validate the identifier against an existing user before returning an update result.
+- These results represent observed ReqRes demo behavior and are not assumed to be the expected contract of a production API.
+
+---
+
+## PUT Update User - Security Inputs
+
+Postman request:
+
+`PUT Update User - Security Inputs`
+
+Request:
+
+`PUT {{base_url}}/api/users/{{security_user_id}}`
+
+Security test data:
+
+```text
+2' OR '1'='1
+2%
+1=1
+```
+
+| ID | Scenario | Test Data | Expected Result | Actual Result | Status |
+|---|---|---|---|---|---|
+| PUT-SEC-001 | SQL-like path input | `2' OR '1'='1` | Input must not cause unintended application behavior | HTTP 403; Cloudflare HTML response | Security control observed |
+| PUT-SEC-002 | Encoded / suspicious input | `2%` | Suspicious input should be handled safely | HTTP 403; Cloudflare HTML response | Security control observed |
+| PUT-SEC-003 | Boolean / injection-like input | `1=1` | Input must not alter update behavior | HTTP 403; Cloudflare HTML response | Security control observed |
+
+### Security Input Observations
+
+- Security-oriented path values are intercepted by the upstream Cloudflare security layer.
+- The response is HTTP 403 Forbidden with `text/html` rather than the normal application JSON response.
+- No `updatedAt` value or normal application update result is returned.
+- This confirms that these specific requests were blocked upstream.
+- It does not prove that the underlying application itself is immune to injection vulnerabilities.
+
+---
+
+## PUT Update User - Malformed JSON
+
+Postman request:
+
+`PUT Update User - Malformed JSON`
+
+Request:
+
+`PUT {{base_url}}/api/users/{{positive_user_id}}`
+
+Content-Type:
+
+`application/json`
+
+Example malformed request body:
+
+```text
+{
+  "name": "Igor"
+  "job": "QA Engineer",
+}
+```
+
+| ID | Scenario | Expected Result | Actual Result | Status |
+|---|---|---|---|---|
+| PUT-JSON-001 | Send malformed JSON | HTTP 400 Bad Request | HTTP 400 Bad Request | Pass |
+| PUT-JSON-002 | Validate error response type | Response is JSON | JSON returned | Pass |
+| PUT-JSON-003 | Validate error code | Response contains `error = invalid_json` | `invalid_json` returned | Pass |
+| PUT-JSON-004 | Validate error message | Response contains non-empty error message | Error message returned | Pass |
+| PUT-JSON-005 | Validate no update result | Response does not contain `updatedAt` | No update result returned | Pass |
+
+### Malformed JSON Observation
+
 Malformed JSON submitted with `Content-Type: application/json` is rejected with HTTP 400 Bad Request.
 
-The API returns a structured JSON error and does not generate a user ID or creation timestamp.
+The API returns a structured `invalid_json` response and does not return the normal PUT update result.
+
+---
+
+## PUT Observations
+
+- Valid PUT requests return HTTP 200 with the supplied fields and an `updatedAt` timestamp.
+- The demo endpoint performs very limited payload validation.
+- Empty bodies, missing fields, null values, empty values, and additional properties may still be accepted.
+- A non-existing but syntactically valid user ID can still receive HTTP 200.
+- Invalid path parameters may also be processed without resource validation.
+- Security-oriented path inputs are intercepted by the upstream Cloudflare layer and return HTTP 403.
+- Malformed JSON is rejected with HTTP 400 and a structured `invalid_json` error.
+- These findings describe observed behavior of the ReqRes demo API and should not automatically be interpreted as production API requirements or vulnerabilities.
 
 ---
 
 # Overall Observations
 
-- The GET endpoint distinguishes between ordinary invalid identifiers and suspicious inputs intercepted by the upstream security layer.
-- The POST demo endpoint performs very limited payload validation.
-- Missing fields, unexpected data types, null values, nested objects, and additional properties are accepted.
-- Incorrect request Content-Type may still result in HTTP 201 even though submitted user fields are not processed.
-- Malformed JSON is correctly rejected with HTTP 400.
-- These behaviors describe the observed ReqRes demo API and should not automatically be treated as production API requirements.
+- GET requests return user data for valid IDs and HTTP 404 for ordinary invalid or non-existing identifiers.
+- Security-oriented GET and PUT path inputs may be intercepted by the upstream Cloudflare security layer and return HTTP 403.
+- POST and PUT demo endpoints perform limited payload validation and accept missing fields, unexpected data types, null values, and additional properties.
+- POST requests with an incorrect Content-Type may return HTTP 201 even when submitted user fields are not processed.
+- PUT requests may return HTTP 200 for non-existing and invalid user identifiers.
+- Malformed JSON is rejected with HTTP 400 and a structured `invalid_json` response.
+- These findings describe observed behavior of the ReqRes demo API and should not automatically be interpreted as production requirements or vulnerabilities.
