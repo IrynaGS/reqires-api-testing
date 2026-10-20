@@ -104,6 +104,571 @@
             }
           },
           "response": []
+        },
+        {
+          "name": "POST Create User Positive",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 201\", function () {\n    pm.response.to.have.status(201);\n});\n\npm.test(\"Response is JSON\", function () {\n    pm.expect(pm.response.headers.get(\"Content-Type\"))\n        .to.include(\"application/json\");\n});\npm.test(\"Returned user data matches request body\", function () {\n    const response = pm.response.json();\n    const requestBody = JSON.parse(pm.request.body.raw);\n\n    pm.expect(response.name).to.eql(requestBody.name);\n    pm.expect(response.job).to.eql(requestBody.job);\n});\npm.test(\"Created user has an ID\", function () {\n    const response = pm.response.json();\n\n    pm.expect(response).to.have.property(\"id\");\n    pm.expect(response.id).to.not.be.empty;\n});\npm.test(\"Created user has valid createdAt timestamp\", function () {\n    const response = pm.response.json();\n\n    pm.expect(response).to.have.property(\"createdAt\");\n    pm.expect(Date.parse(response.createdAt)).to.not.be.NaN;\n});\npm.test(\"Response matches expected JSON schema\", function () {\n    const schema = {\n        type: \"object\",\n        required: [\"name\", \"job\", \"id\", \"createdAt\"],\n        properties: {\n            name: {\n                type: \"string\",\n                minLength: 1\n            },\n            job: {\n                type: \"string\",\n                minLength: 1\n            },\n            id: {\n                type: \"string\",\n                minLength: 1\n            },\n            createdAt: {\n                type: \"string\",\n                format: \"date-time\"\n            }\n        },\n        additionalProperties: true\n    };\n\n    pm.response.to.have.jsonSchema(schema);\n});\npm.test(\"createdAt is a valid date\", function () {\n    const response = pm.response.json();\n\n    pm.expect(Date.parse(response.createdAt)).to.not.be.NaN;\n});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Petr\",\n  \"job\": \"QA Engineer\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/users",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "users"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "POST Create User - Payload Validation",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Request is handled without server error\", function () {\n    pm.expect(pm.response.code).to.be.below(500);\n});\n\npm.test(\"Response is JSON\", function () {\n    pm.expect(pm.response.headers.get(\"Content-Type\"))\n        .to.include(\"application/json\");\n});\n\npm.test(\"API returns 201 Created\", function () {\n    pm.response.to.have.status(201);\n});\n\npm.test(\"Response contains generated ID\", function () {\n    const response = pm.response.json();\n\n    pm.expect(response).to.have.property(\"id\");\n    pm.expect(response.id).to.not.be.empty;\n});\n\npm.test(\"Response contains valid createdAt\", function () {\n    const response = pm.response.json();\n\n    pm.expect(response).to.have.property(\"createdAt\");\n    pm.expect(Date.parse(response.createdAt)).to.not.be.NaN;\n});\n\npm.test(\"Response reflects provided JSON fields\", function () {\n    const response = pm.response.json();\n    const requestBody = JSON.parse(pm.request.body.raw);\n\n    Object.keys(requestBody).forEach((key) => {\n        pm.expect(\n            response,\n            `Response should contain field '${key}'`\n        ).to.have.property(key);\n\n        pm.expect(response[key]).to.eql(requestBody[key]);\n    });\n});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": null,\n  \"job\": true,\n  \"role\": \"admin\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/users",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "users"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "POST Create User - Content Type Validation",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Request is handled without server error\", function () {\n    pm.expect(pm.response.code).to.be.below(500);\n});\n\npm.test(\"API returns 201 Created\", function () {\n    pm.response.to.have.status(201);\n});\n\npm.test(\"Response contains generated ID\", function () {\n    const response = pm.response.json();\n\n    pm.expect(response).to.have.property(\"id\");\n    pm.expect(response.id).to.not.be.empty;\n});\n\npm.test(\"Response contains valid createdAt\", function () {\n    const response = pm.response.json();\n\n    pm.expect(response).to.have.property(\"createdAt\");\n    pm.expect(Date.parse(response.createdAt)).to.not.be.NaN;\n});\n\npm.test(\"Submitted user fields are not processed as JSON\", function () {\n    const response = pm.response.json();\n\n    pm.expect(response).to.not.have.property(\"name\");\n    pm.expect(response).to.not.have.property(\"job\");\n    pm.expect(response).to.not.have.property(\"role\");\n});\npm.test(\"Request Content-Type is not application/json\", function () {\n    const contentType = pm.request.headers.get(\"Content-Type\");\n\n    pm.expect(contentType).to.not.include(\"application/json\");\n});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Igor\",\n  \"job\": \"QA Engineer\",\n  \"role\": \"admin\"\n}",
+              "options": {
+                "raw": {
+                  "language": "text"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/users",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "users"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "POST Create User - Malformed JSON",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 400\", function () {\n    pm.response.to.have.status(400);\n});\n\npm.test(\"Response is JSON\", function () {\n    pm.expect(pm.response.headers.get(\"Content-Type\"))\n        .to.include(\"application/json\");\n});\n\npm.test(\"Response contains invalid JSON error\", function () {\n    const response = pm.response.json();\n\n    pm.expect(response).to.have.property(\"error\");\n    pm.expect(response.error).to.eql(\"invalid_json\");\n});\n\npm.test(\"Error message is returned\", function () {\n    const response = pm.response.json();\n\n    pm.expect(response).to.have.property(\"message\");\n    pm.expect(response.message).to.be.a(\"string\");\n    pm.expect(response.message).to.not.be.empty;\n});\n\npm.test(\"No user is created\", function () {\n    const response = pm.response.json();\n\n    pm.expect(response).to.not.have.property(\"id\");\n    pm.expect(response).to.not.have.property(\"createdAt\");\n});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Igor\"\n  \"job\": \"QA Engineer\",\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/users",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "users"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "PUT Update User Positive",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {\n    pm.response.to.have.status(200);\n});\n\npm.test(\"Response is JSON\", function () {\n    pm.expect(pm.response.headers.get(\"Content-Type\"))\n        .to.include(\"application/json\");\n});\n\npm.test(\"Returned user data matches request body\", function () {\n    const response = pm.response.json();\n    const requestBody = JSON.parse(pm.request.body.raw);\n\n    pm.expect(response.name).to.eql(requestBody.name);\n    pm.expect(response.job).to.eql(requestBody.job);\n});\n\npm.test(\"Response contains updatedAt\", function () {\n    const response = pm.response.json();\n\n    pm.expect(response).to.have.property(\"updatedAt\");\n    pm.expect(response.updatedAt).to.not.be.empty;\n});\n\npm.test(\"updatedAt is a valid timestamp\", function () {\n    const response = pm.response.json();\n\n    pm.expect(Date.parse(response.updatedAt)).to.not.be.NaN;\n});\npm.test(\"Response matches expected JSON schema\", function () {\n    const schema = {\n        type: \"object\",\n        required: [\"name\", \"job\", \"updatedAt\"],\n        properties: {\n            name: {\n                type: \"string\",\n                minLength: 1\n            },\n            job: {\n                type: \"string\",\n                minLength: 1\n            },\n            updatedAt: {\n                type: \"string\",\n                format: \"date-time\"\n            }\n        },\n        additionalProperties: true\n    };\n\n    pm.response.to.have.jsonSchema(schema);\n});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "x-api-key",
+                "value": "{{api_key}}",
+                "description": "key for Reqres"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Igor Updated\",\n  \"job\": \"Senior QA Engineer\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/users/{{positive_user_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "{{positive_user_id}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "PUT Update User Payload Validation",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Request is handled without server error\", function () {\n    pm.expect(pm.response.code).to.be.below(500);\n});\n\npm.test(\"Response is JSON\", function () {\n    pm.expect(pm.response.headers.get(\"Content-Type\"))\n        .to.include(\"application/json\");\n});\n\npm.test(\"API returns 200 OK\", function () {\n    pm.response.to.have.status(200);\n});\n\npm.test(\"Response contains updatedAt\", function () {\n    const response = pm.response.json();\n\n    pm.expect(response).to.have.property(\"updatedAt\");\n    pm.expect(response.updatedAt).to.not.be.empty;\n});\n\npm.test(\"updatedAt is a valid timestamp\", function () {\n    const response = pm.response.json();\n\n    pm.expect(Date.parse(response.updatedAt)).to.not.be.NaN;\n});\n\npm.test(\"Response reflects provided JSON fields\", function () {\n    const response = pm.response.json();\n    const requestBody = JSON.parse(pm.request.body.raw);\n\n    Object.keys(requestBody).forEach((key) => {\n        pm.expect(\n            response,\n            `Response should contain field '${key}'`\n        ).to.have.property(key);\n\n        pm.expect(response[key]).to.eql(requestBody[key]);\n    });\n});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "x-api-key",
+                "value": "{{api_key}}",
+                "description": "key for Reqres"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"\",\n  \"job\": \"\",\n  \"role\": \"admin\",\n  \"nose\": null\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/users/{{positive_user_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "{{positive_user_id}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "PUT Update User - Non-existing User",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Request is handled without server error\", function () {\n    pm.expect(pm.response.code).to.be.below(500);\n});\n\npm.test(\"Response is JSON\", function () {\n    pm.expect(pm.response.headers.get(\"Content-Type\"))\n        .to.include(\"application/json\");\n});\n\npm.test(\"API returns 200 OK\", function () {\n    pm.response.to.have.status(200);\n});\n\npm.test(\"Response contains updatedAt\", function () {\n    const response = pm.response.json();\n\n    pm.expect(response).to.have.property(\"updatedAt\");\n    pm.expect(response.updatedAt).to.not.be.empty;\n});\n\npm.test(\"updatedAt is a valid timestamp\", function () {\n    const response = pm.response.json();\n\n    pm.expect(Date.parse(response.updatedAt)).to.not.be.NaN;\n});\n\npm.test(\"Response reflects provided JSON fields\", function () {\n    const response = pm.response.json();\n    const requestBody = JSON.parse(pm.request.body.raw);\n\n    Object.keys(requestBody).forEach((key) => {\n        pm.expect(\n            response,\n            `Response should contain field '${key}'`\n        ).to.have.property(key);\n\n        pm.expect(response[key]).to.eql(requestBody[key]);\n    });\n});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "x-api-key",
+                "value": "{{api_key}}",
+                "description": "key for Reqres"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"\",\n  \"job\": \"\",\n  \"role\": \"admin\",\n  \"nose\": null\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/users/{{non_existing_user_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "{{non_existing_user_id}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "PUT Update User - Invalid Path Parameter",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Request is handled without server error\", function () {\n    pm.expect(pm.response.code).to.be.below(500);\n});\n\npm.test(\"Response is JSON\", function () {\n    pm.expect(pm.response.headers.get(\"Content-Type\"))\n        .to.include(\"application/json\");\n});\n\npm.test(\"API returns 200 OK\", function () {\n    pm.response.to.have.status(200);\n});\n\npm.test(\"Response contains updatedAt\", function () {\n    const response = pm.response.json();\n\n    pm.expect(response).to.have.property(\"updatedAt\");\n    pm.expect(response.updatedAt).to.not.be.empty;\n});\n\npm.test(\"updatedAt is a valid timestamp\", function () {\n    const response = pm.response.json();\n\n    pm.expect(Date.parse(response.updatedAt)).to.not.be.NaN;\n});\n\npm.test(\"Response reflects provided JSON fields\", function () {\n    const response = pm.response.json();\n    const requestBody = JSON.parse(pm.request.body.raw);\n\n    Object.keys(requestBody).forEach((key) => {\n        pm.expect(\n            response,\n            `Response should contain field '${key}'`\n        ).to.have.property(key);\n\n        pm.expect(response[key]).to.eql(requestBody[key]);\n    });\n});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "x-api-key",
+                "value": "{{api_key}}",
+                "description": "key for Reqres"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"\",\n  \"job\": \"\",\n  \"role\": \"user\",\n  \"nose\": null\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/users/{{invalid_user_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "{{invalid_user_id}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "PUT Update User - Security Inputs",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 403\", function () {\n    pm.response.to.have.status(403);\n});\n\npm.test(\"Response is HTML\", function () {\n    pm.expect(pm.response.headers.get(\"Content-Type\"))\n        .to.include(\"text/html\");\n});\n\npm.test(\"Request is blocked by upstream security layer\", function () {\n    const body = pm.response.text().toLowerCase();\n\n    pm.expect(body).to.include(\"cloudflare\");\n});\n\npm.test(\"No application update response is returned\", function () {\n    const body = pm.response.text();\n\n    pm.expect(body).to.not.include('\"updatedAt\"');\n});\n\npm.test(\"No submitted user data is returned\", function () {\n    const body = pm.response.text();\n\n    pm.expect(body).to.not.include('\"name\"');\n    pm.expect(body).to.not.include('\"job\"');\n});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "x-api-key",
+                "value": "{{api_key}}",
+                "description": "key for Reqres"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"\",\n  \"job\": \"\",\n  \"role\": \"admin\",\n  \"nose\": \"long\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/users/{{security_use_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "{{security_use_id}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "PUT Create User - Malformed JSON",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 400\", function () {\n    pm.response.to.have.status(400);\n});\n\npm.test(\"Response is JSON\", function () {\n    pm.expect(pm.response.headers.get(\"Content-Type\"))\n        .to.include(\"application/json\");\n});\n\npm.test(\"Response contains invalid JSON error\", function () {\n    const response = pm.response.json();\n\n    pm.expect(response).to.have.property(\"error\");\n    pm.expect(response.error).to.eql(\"invalid_json\");\n});\n\npm.test(\"Error message is returned\", function () {\n    const response = pm.response.json();\n\n    pm.expect(response).to.have.property(\"message\");\n    pm.expect(response.message).to.be.a(\"string\");\n    pm.expect(response.message).to.not.be.empty;\n});\n\npm.test(\"No update result is returned\", function () {\n    const response = pm.response.json();\n\n    pm.expect(response).to.not.have.property(\"updatedAt\");\n});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Igor\"\n  \"job\": \"QA Engineer\",\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/users/{{positive_user_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "{{positive_user_id}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "DELETE - User Positive",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 204\", function () {\n    pm.response.to.have.status(204);\n});\n\npm.test(\"Response body is empty\", function () {\n    pm.expect(pm.response.text()).to.eql(\"\");\n});\n\npm.test(\"Response time is acceptable\", function () {\n    pm.expect(pm.response.responseTime).to.be.below(2000);\n});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/users/{{positive_user_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "{{positive_user_id}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "DELETE User - Non-existing User",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 204\", function () {\n    pm.response.to.have.status(204);\n});\n\npm.test(\"Response body is empty\", function () {\n    pm.expect(pm.response.text()).to.eql(\"\");\n});\n\npm.test(\"Non-existing user ID is accepted without server error\", function () {\n    pm.expect(pm.response.code).to.be.below(500);\n});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "x-api-key",
+                "value": "{{api_key}}",
+                "description": "key for Reqres"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/users/{{non_existing_user_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "{{non_existing_user_id}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "DELETE User - Invalid Path Parameter",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 204\", function () {\n    pm.response.to.have.status(204);\n});\n\npm.test(\"Response body is empty\", function () {\n    pm.expect(pm.response.text()).to.eql(\"\");\n});\n\npm.test(\"Invalid path parameter is accepted without server error\", function () {\n    pm.expect(pm.response.code).to.be.below(500);\n});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "x-api-key",
+                "value": "{{api_key}}",
+                "description": "key for Reqres"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/users/{{invalid_user_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "{{invalid_user_id}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "DELETE User - Security Inputs",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 403\", function () {\n    pm.response.to.have.status(403);\n});\n\npm.test(\"Response is HTML\", function () {\n    pm.expect(pm.response.headers.get(\"Content-Type\"))\n        .to.include(\"text/html\");\n});\n\npm.test(\"Request is blocked by upstream security layer\", function () {\n    const body = pm.response.text().toLowerCase();\n\n    pm.expect(body).to.include(\"cloudflare\");\n});\n\npm.test(\"No normal DELETE response is returned\", function () {\n    pm.expect(pm.response.code).to.not.eql(204);\n});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "x-api-key",
+                "value": "{{api_key}}",
+                "description": "key for Reqres"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/users/{{security_use_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "{{security_use_id}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "New Request",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": ""
+            }
+          },
+          "response": []
         }
       ]
     }
