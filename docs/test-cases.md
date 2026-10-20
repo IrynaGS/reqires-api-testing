@@ -490,6 +490,173 @@ The API returns a structured `invalid_json` response and does not return the nor
 
 ---
 
+# DELETE User
+
+Endpoint:
+
+`DELETE /api/users/{id}`
+
+Postman requests:
+
+- `DELETE User Positive`
+- `DELETE User - Non-existing User`
+- `DELETE User - Invalid Path Parameter`
+- `DELETE User - Security Inputs`
+
+---
+
+## DELETE User Positive
+
+Postman request:
+
+`DELETE User Positive`
+
+Request:
+
+`DELETE {{base_url}}/api/users/{{positive_user_id}}`
+
+Default test data:
+
+`positive_user_id = 2`
+
+Request body:
+
+`none`
+
+| ID | Scenario | Expected Result | Actual Result | Status |
+|---|---|---|---|---|
+| DELETE-USER-001 | Delete existing user | HTTP 204 No Content | HTTP 204 No Content | Pass |
+| DELETE-USER-002 | Validate response body | Response body is empty | Empty response body returned | Pass |
+| DELETE-USER-003 | Validate response time | Response time is below 2000 ms | Response time within limit | Pass |
+
+### Positive DELETE Observation
+
+A DELETE request for an existing user returns HTTP 204 No Content with an empty response body.
+
+---
+
+## DELETE User - Non-existing User
+
+Postman request:
+
+`DELETE User - Non-existing User`
+
+Request:
+
+`DELETE {{base_url}}/api/users/{{non_existing_user_id}}`
+
+Test data:
+
+`non_existing_user_id = 1000`
+
+Request body:
+
+`none`
+
+| ID | Scenario | Expected / Observed Result | Status |
+|---|---|---|---|
+| DELETE-NONEXIST-001 | Delete non-existing user ID `1000` | HTTP 204 No Content returned | Observed |
+| DELETE-NONEXIST-002 | Validate response body | Empty response body returned | Pass |
+| DELETE-NONEXIST-003 | Validate server handling | Request is handled without server error | Pass |
+
+### Non-existing User Observation
+
+A DELETE request to user ID `1000`, which is not an existing user in the demo dataset, still returns HTTP 204 No Content.
+
+No resource-existence validation was observed.
+
+This behavior is documented as observed behavior rather than classified as a defect because no production API requirement is available requiring HTTP 404 for this demo endpoint.
+
+---
+
+## DELETE User - Invalid Path Parameter
+
+Postman request:
+
+`DELETE User - Invalid Path Parameter`
+
+Request:
+
+`DELETE {{base_url}}/api/users/{{invalid_user_id}}`
+
+Example test data:
+
+```text
+-1
+abc
+%23
+```
+
+`%23` is the URL-encoded representation of `#`.
+
+Request body:
+
+`none`
+
+| ID | Scenario | Test Data | Observed Result |
+|---|---|---|---|
+| DELETE-PATH-001 | Negative user ID | `-1` | HTTP 204 No Content |
+| DELETE-PATH-002 | Alphabetic user ID | `abc` | HTTP 204 No Content |
+| DELETE-PATH-003 | Special-character user ID | `%23` | HTTP 204 No Content |
+
+### Invalid Path Parameter Observations
+
+- Invalid user identifiers still receive HTTP 204 No Content.
+- The DELETE endpoint does not appear to validate whether the supplied identifier is a valid existing user before returning a success-style response.
+- The response body remains empty.
+- These results represent observed ReqRes demo behavior and are not assumed to be the expected contract of a production API.
+
+---
+
+## DELETE User - Security Inputs
+
+Postman request:
+
+`DELETE User - Security Inputs`
+
+Request:
+
+`DELETE {{base_url}}/api/users/{{security_user_id}}`
+
+Security test data:
+
+```text
+2' OR '1'='1
+2%
+1=1
+```
+
+Request body:
+
+`none`
+
+| ID | Scenario | Test Data | Expected Result | Actual Result | Status |
+|---|---|---|---|---|---|
+| DELETE-SEC-001 | SQL-like path input | `2' OR '1'='1` | Input must not cause unintended application behavior | HTTP 403 Forbidden; Cloudflare HTML response | Security control observed |
+| DELETE-SEC-002 | Encoded / suspicious input | `2%` | Suspicious input should be handled safely | HTTP 403 Forbidden; Cloudflare HTML response | Security control observed |
+| DELETE-SEC-003 | Boolean / injection-like input | `1=1` | Input must not alter delete behavior | HTTP 403 Forbidden; Cloudflare HTML response | Security control observed |
+
+### Security Input Observations
+
+- Security-oriented path values are intercepted by the upstream Cloudflare security layer.
+- The response is HTTP 403 Forbidden with `text/html` instead of the normal DELETE response.
+- No HTTP 204 application response is returned.
+- This confirms that these specific requests were blocked upstream.
+- It does not prove that the underlying application itself is immune to injection vulnerabilities.
+
+---
+
+## DELETE Overall Observations
+
+- A valid existing user ID returns HTTP 204 No Content.
+- A non-existing user ID also returns HTTP 204 No Content.
+- Invalid path parameter values such as negative IDs, alphabetic values, and encoded special characters may also return HTTP 204.
+- The endpoint does not appear to validate resource existence or identifier format before returning the normal success-style DELETE response.
+- Security-oriented path inputs are intercepted by the upstream Cloudflare layer and return HTTP 403.
+- These findings describe observed behavior of the ReqRes demo API and should not automatically be interpreted as production API requirements or vulnerabilities.
+
+---
+
 # Overall Observations
 
 - GET requests return user data for valid IDs and HTTP 404 for ordinary invalid or non-existing identifiers.
