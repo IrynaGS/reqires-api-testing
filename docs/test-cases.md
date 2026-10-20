@@ -659,10 +659,17 @@ Request body:
 
 # Overall Observations
 
-- GET requests return user data for valid IDs and HTTP 404 for ordinary invalid or non-existing identifiers.
-- Security-oriented GET and PUT path inputs may be intercepted by the upstream Cloudflare security layer and return HTTP 403.
-- POST and PUT demo endpoints perform limited payload validation and accept missing fields, unexpected data types, null values, and additional properties.
-- POST requests with an incorrect Content-Type may return HTTP 201 even when submitted user fields are not processed.
-- PUT requests may return HTTP 200 for non-existing and invalid user identifiers.
-- Malformed JSON is rejected with HTTP 400 and a structured `invalid_json` response.
-- These findings describe observed behavior of the ReqRes demo API and should not automatically be interpreted as production requirements or vulnerabilities.
+- Valid GET requests return HTTP 200 with JSON user data for existing user IDs.
+- Ordinary invalid or non-existing GET identifiers return HTTP 404.
+- Security-oriented GET, PUT, and DELETE path inputs may be intercepted by the upstream Cloudflare security layer and return HTTP 403 with an HTML response.
+- The POST demo endpoint performs very limited payload validation and accepts missing fields, unexpected data types, null values, nested objects, and additional properties.
+- POST requests with an incorrect `Content-Type` may still return HTTP 201 even when the submitted user fields are not processed.
+- Malformed JSON submitted to POST and PUT is rejected with HTTP 400 and a structured `invalid_json` response.
+- Valid PUT requests return HTTP 200 with the submitted fields and an `updatedAt` timestamp.
+- PUT requests may also return HTTP 200 for non-existing users and invalid path parameters, indicating limited resource and identifier validation in the demo endpoint.
+- Valid DELETE requests return HTTP 204 No Content with an empty response body.
+- DELETE requests for non-existing users and ordinary invalid identifiers may also return HTTP 204 No Content.
+- Across PUT and DELETE, the demo API does not consistently distinguish between existing resources, non-existing resources, and ordinary invalid identifiers.
+- HTTP success status codes alone do not always confirm that the supplied data was fully validated or processed.
+- Security-layer blocking observed in these tests confirms that specific suspicious requests were intercepted upstream, but it does not prove that the underlying application itself is immune to injection vulnerabilities.
+- These findings describe the observed behavior of the ReqRes demo API and should not automatically be interpreted as production API requirements, defects, or security vulnerabilities.
